@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backendEx.mapper.UserMapper">
+
+    <select id="selectAllUser" resultType="java.util.Map">
+        select * from notice_board
+    </select>
+
+    <select id="getUser" parameterType="Integer" resultType="java.util.Map">
+        select * from notice_board where idx = #{idx}
+    </select>
+
+    <insert id="insertBoard" parameterType="com.example.backendEx.model.BoardVO">
+        insert into notice_board values(#{username},0,0,#{title},#{contents},0)
+    </insert>
+
+    <insert id="join" parameterType="com.example.backendEx.model.UserVO">
+        insert into users values(0,#{userId},#{userEmail},#{userName},#{userPwd},#{userRole},NOW())
+    </insert>
+</mapper>

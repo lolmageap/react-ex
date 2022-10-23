@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/examples
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: root
+    password: 1234567890
+
+mybatis:
+  mapper-locations: mapper/*.xml
+
+  security:
+    oauth2.client:
+      registration:
+        google:
+          client-id: 1007868586139-5vt7vipqkdk8mekqel6ai4l0idal7cn4.apps.googleusercontent.com
+          client-secret: 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
+          scope:
+            - email
+            - profile
