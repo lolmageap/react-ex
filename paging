@@ -1,0 +1,282 @@
+function getListingsByIdx(param, category, page) {
+    checkGps().then((res) => {
+        let location = res == null ? {lat: 40.74845268680335, lng: -73.98566440050624} : res;
+        if (brokerIdx == null) {
+            return;
+        }
+        param = param || {};
+        param.user_idx = brokerIdx;
+        param = Object.assign(param, location);
+        $.ajax({
+            url: '/rest/agent/listings',
+            data: JSON.stringify(param),
+            dataType: 'json',
+            contentType: 'application/json; charset=UTF-8',
+            method: 'POST',
+            success: function (res) {
+                let data = res.data;
+                getSelectListCategory(data,category,page); //추가
+            }
+        });
+    });
+}
+
+/////////////////////////////////////////// 추가
+//브로커 정보를 받아온 후 페이징 처리와 카테고리 분류 작업
+function getSelectListCategory(data,category,page){
+    let dataArray = []; //category 선택시 data
+    let pageArray = new Array(); // 받아온 data 재배열 , 10개씩 넣기 ex) 23개 데이터 받아오면 Array(3)[Array(10),Array(10),Array(3)]으로 치환
+    let pageArrayTemp = new Array(); // 재배열을 도와줌
+    let k = 0;
+    let button = ''; // page button
+    let dataLength = 0; // 데이터 페이지의 pageArray[i] 양에 따라 높이 지정
+    let ads = 390; // 광고의 높이 px
+    let inBox = document.getElementById('inBox').clientHeight; // 중개인 소개 boxHeight
+    let viewBtn = document.getElementById('detailPage'); // 중개인 소개 view more button
+    let categoryBtn = document.getElementById('detailCategory'); // 중개인 소개 중개인 등록 물건 button
+    let style = 'style="margin-left:-1px; color:#999; width:29px; height:29px; margin-top:10px; text-align:center; border:1px solid #d1d1d1; line-height:29px;"';
+
+    // 기본 페이지 값
+    if (page == '' || page == null) { page = 0; }
+    //전체 정렬
+    if (category == null || category == '' || category == 'all' || category == 'undefined') {
+        //페이징 처리
+        if (Math.floor(data.length) > 9) {
+            if (data.length % 10 != 0) {
+                pageArray = brokerPaging(data);
+                for (let i = data.length % 10; i > 0; i--) {
+                    pageArrayTemp[k] = data[Math.floor(data.length) - i];
+                    k++;
+                }
+                pageArray[Math.floor(data.length / 10)] = pageArrayTemp;
+            } else {
+                pageArray = brokerPaging(data);
+            }
+        } else {
+            for (let i = data.length % 10; i > 0; i--) {
+                pageArrayTemp[k] = data[Math.floor(data.length) - i];
+                k++;
+            }
+            pageArray[0] = pageArrayTemp;
+        }
+        // 페이징 처리 시 현재 페이지 기록
+        if(Math.floor(data.length/10)<1){
+            button += `<input type="hidden" id="pagement" value="${page}" name="none">`;
+            ads = 0;
+        }
+        else if(page < 1){
+            button += `<input type="hidden" id="pagement" value="${page}" name="min">`
+        }
+        else if(page == Math.floor(data.length/10)){
+            button += `<input type="hidden" id="pagement" value="${page}" name="max">`
+        }
+        else {
+            button += `<input type="hidden" id="pagement" value="${page}">`
+        }
+
+        //예외처리
+        if(pageArray[page]==undefined){
+            pageArray[page] = '';
+        }
+        html = formatULchildren('broker', pageArray[page]);
+        dataLength = pageArray[Math.floor(data.length / 10)];
+    }
+    // 카테고리 선택 값 정렬
+    else {
+        //카테고리 분류 후 다시 그리기
+        for (let i = 0; i < Math.floor(data.length); i++) {
+            if (data[i].table_flag == category) {
+                dataArray.push(data[i]);
+            }
+        }
+        //페이징 처리
+        if (Math.floor(data.length) >= 10) {
+            if (dataArray.length % 10 != 0) {
+                pageArray = brokerPaging(dataArray);
+                for (let i = dataArray.length % 10; i > 0; i--) {
+                    pageArrayTemp[k] = dataArray[Math.floor(dataArray.length) - i];
+                    k++;
+                }
+                pageArray[Math.floor(dataArray.length / 10)] = pageArrayTemp;
+            } else {
+                pageArray = brokerPaging(dataArray);
+            }
+        } else {
+            for (let i = dataArray.length % 10; i > 0; i--) {
+                pageArrayTemp[k] = dataArray[Math.floor(dataArray.length) - i];
+            }
+            pageArray[0] = pageArrayTemp;
+        }
+        // 페이징 처리 시 현재 페이지 기록 (1페이지와 마지막 페이지에서 페이지 이동 버튼 클릭 넘어가지 않게 하기 위해)
+        if(Math.floor(dataArray.length/10)<1){
+            button += `<input type="hidden" id="pagement" value="${page}" name="none">`;
+            ads=0;
+        }
+        else if(page == 0){
+            button += `<input type="hidden" id="pagement" value="${page}" name="min">`
+        }
+        else if(page == Math.floor(dataArray.length/10)){
+            button += `<input type="hidden" id="pagement" value="${page}" name="max">`
+        }
+        else {
+            button += `<input type="hidden" id="pagement" value="${page}">`
+        }
+        //예외처리
+        if(pageArray[page]==undefined){
+            pageArray[page] = '';
+        }
+        html = formatULchildren('broker', pageArray[page]);
+        dataLength = pageArray[Math.floor(dataArray.length / 10)];
+    }
+
+    // 카테고리수 count
+    let bs = 0; let cs = 0; let hs = 0; let rl = 0;
+    for (let i = 0; i < Math.floor(data.length); i++) {
+        switch (data[i].table_flag) {
+            case "business_sales" : bs += 1; break;
+            case "commercial_sales" : cs += 1; break;
+            case "house_sales" : hs += 1; break;
+            case "rent_lease" : rl += 1; break;
+            default : break;
+        }
+    }
+
+    // 페이징처리 로직 // << 버튼추가
+    button += `<a onclick="pageMove('${category}',-1);" ${style} ><<</a>`
+    // 페이지 번호
+    if (pageArray.length > 0) {
+        // 총 페이지 수가 10페이지 이하일 경우 ex) 1~pageArray.length 만큼 페이지 번호 출력
+        if (pageArray.length <= 10){
+            for (let i = 0; i < pageArray.length; i++) {
+                button += `<a id="selectPage${i}" onclick="getListingsByIdx('','${category}',${i});" ${style}>${i + 1}</a>`;
+            }
+        }
+        // 총 페이지 수가 10페이지 이상이고 현재 페이지가 10단위의 페이지일 경우 ex) 34페이지까지 있는데 28페이지면 20~30페이지의 페이지 번호 출력
+        else if (pageArray.length>10 && page < Math.floor((pageArray.length-1)/10)*10){
+            for (let i=Math.floor(page/10)*10; i<Math.floor(page/10+1)*10; i++) {
+                button += `<a id="selectPage${i}" onclick="getListingsByIdx('','${category}',${i});" ${style}">${i + 1}</a>`;
+            }
+        }
+        // 총 페이지 수가 10페이지 이상이고 현재 페이지가 마지막 단위의 페이지일 경우 ex) 34페이지까지 있는데 30페이지 이상이면 30~34페이지의 페이지 번호 출력
+        else{
+            for (let i = Math.floor(pageArray.length/10)*10; i < pageArray.length; i++) {
+                button += `<a id="selectPage${i}" onclick="getListingsByIdx('','${category}',${i});" ${style}>${i + 1}</a>`;
+            }
+        }
+    }
+    else { // 데이터량이 10개이하거나 데이터가 없는 페이지일 경우
+        button += `<a style="margin-left:-1px; color:#fff; width:29px; height:29px; margin-top:10px; text-align:center; border:1px solid #d1d1d1; background-color:#555; line-height:29px;">1</a>`;
+    }
+    // >> 버튼추가
+    button += `<a onclick="pageMove('${category}',1);" ${style}">>></a>`
+
+    //짤림 방지 및 카테고리 라인 높이 조정
+    if (viewBtn.textContent.indexOf('Close')!=-1 && categoryBtn.textContent.indexOf('Close')!=-1){
+        if (pageArray[page].length == 10) {
+            viewSwiper.$wrapperEl.css('height', `${3485+inBox+ads}px`);
+        }else {
+            // view가 펼쳐지고 데이터가 10개 미만일 때
+            viewSwiper.$wrapperEl.css('height',`${(dataLength.length)*(126.8)+2225+inBox+ads}px`);
+        }
+    }else if (viewBtn.textContent.indexOf('View')!=-1 && categoryBtn.textContent.indexOf('Close')!=-1){
+        if (pageArray[page].length == 10) {
+            viewSwiper.$wrapperEl.css('height',`${2200+inBox+ads}px`);
+        }else {
+            // view가 닫히고 데이터가 10개 미만일 때
+            viewSwiper.$wrapperEl.css('height',`${(dataLength.length)*(126.8)+925+inBox+ads}px`);
+        }
+    }
+
+    //view 추가
+    $('#countBs').html('Business Sales(' + bs + ')');
+    $('#countCs').html('Commercial Sales(' + cs + ')');
+    $('#countHs').html('Condo House Sales(' + hs + ')');
+    $('#countRl').html('Rent&Lease(' + rl + ')');
+    $('#countList').html('All(' + data.length + ')');
+    $('#listings').html(html);
+    $('#listingsPage').html(button);
+
+    // 현재 페이지 버튼 활성화
+    let nowPage = document.getElementById('selectPage'+page);
+    nowPage.style.backgroundColor = '#555';
+    nowPage.style.color = '#fff';
+    // ex) 현재 페이지에서 같은 페이지 클릭 비활성화 ex) 3page에서 3page 클릭 비활성화
+    nowPage.onclick = null;
+
+}
+
+// 페이지 화살표 클릭 시 이동 ex) >> , <<
+function pageMove(category, number){
+    let nowPage = document.getElementById('pagement');
+    let maxVal = parseInt(nowPage.value);
+    nowPage.value = parseInt(nowPage.value);
+    nowPage.value = parseInt(nowPage.value) + (parseInt(number));
+    if (nowPage.name == 'none'){ // 1페이지만 있는 페이지에서는 버튼 비활성화
+        return ;
+    } else if (nowPage.name == 'min' && nowPage.value < 0){ //1페이지에선 << 비활성화
+        nowPage.value = 0
+    } else if (nowPage.name == 'max' && maxVal < nowPage.value){ // 마지막페이지에선 >> 비활성화
+        nowPage.value = maxVal;
+    } else {
+        getListingsByIdx('',category,nowPage.value);
+    }
+}
+
+// 브로커페이지 페이징처리 모듈화
+function brokerPaging(data){
+    let pageArray = new Array();
+    let pageArrayTemp = new Array();
+
+    for (let i = 0; i < Math.floor(data.length/10); i++) {
+        for (let j = 0; j < 10; j++) {
+            pageArrayTemp[j] = (data[(i*10)+j]);
+        }
+        pageArray[i] = pageArrayTemp;
+        pageArrayTemp = [];
+    }
+    return pageArray;
+}
+
+// 글자색 변경 , 서버로 다시 로직보내기
+function choiceCate(e){
+
+    let countList = document.getElementById('countList');
+    let countBs = document.getElementById('countBs');
+    let countCs = document.getElementById('countCs');
+    let countHs = document.getElementById('countHs');
+    let countRl = document.getElementById('countRl');
+    let arrays = [countList, countBs, countCs, countHs, countRl];
+    let stat = 0;
+    let category = "";
+
+    switch (e){
+        case 'countList' :
+            stat = 0;
+            category = "all";
+            break;
+        case 'countBs' :
+            stat = 1;
+            category = "business_sales";
+            break;
+        case 'countCs' :
+            stat = 2;
+            category = "commercial_sales";
+            break;
+        case 'countHs' :
+            stat = 3;
+            category = "house_sales";
+            break;
+        case 'countRl' :
+            stat = 4;
+            category = "rent_lease";
+            break;
+        default :
+            break;
+    }
+    arrays[stat].style.fontWeight = 'bold';
+    arrays.splice(stat,1);
+    for (let i = 0; i < arrays.length; i++) {
+        arrays[i].style.fontWeight = 'normal';
+    };
+    getListingsByIdx('',category,0);
+}
